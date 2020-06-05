@@ -5,3 +5,5 @@ API feita na primeira edição da NEXT LEVEL WEEK promovida pela Rocketseat
 > Node.js 
 
 > TypeScript
+
+> PostgresSQL
