@@ -8,17 +8,36 @@ class PointsController {
 
         const { city, state, items } = req.query;
 
-        const parsedItems = String(items).split(',').map(item => Number(item.trim()));
-
-        const points = await conn('points')
+        const query = conn('points')
             .join('point_items', 'points.id', '=', 'point_items.point_id')
-            .where('city', 'like', `%${String(city)}%`)
-            .where('state', 'like', `%${String(state)}%`)
-            .whereIn('point_items.item_id', parsedItems)
             .distinct()
-            .select('points.*')
-            ;
-        return res.json(points);
+            .select('points.*');
+
+        if (city != null && city != '')
+            query.where('city', 'like', `%${String(city)}%`);
+
+        if (state != null && state != '')
+            query.where('state', 'like', `%${String(state)}%`);
+
+        const itemsStr = String(items);
+        const itemsPos = ((items as any[])[0] as string);
+        if (items != null && itemsStr != '[]' && itemsPos != undefined) {
+
+            const itemsStr = itemsPos.replace('[', '').replace(']', '');
+            const parsedItems = itemsStr.split(',').map(item => Number(item.trim()));
+            query.whereIn('point_items.item_id', parsedItems);
+
+        } else {
+            query.whereIn('point_items.item_id', []);
+        }
+        const points = await query
+        const serializedPoints = points.map(point => {
+            return {
+                ...point,
+                imageUrl: `http://192.168.0.111:3333/uploads/${point.image}`
+            }
+        });
+        return res.json(serializedPoints);
     }
 
     async  show(req: Request, res: Response) {
@@ -28,12 +47,15 @@ class PointsController {
         if (!point) {
             return res.status(400).json({ message: 'O ponto não existe' });
         }
-        return res.json({ point, items });
+        const serializedPoint = {
+            ...point,
+            imageUrl: `http://192.168.0.111:3333/uploads/${point.image}`
+        }
+        return res.json({ point: serializedPoint, items });
     }
     async  create(req: Request, res: Response) {
         /// Desestruturação
         const {
-            // image
             name
             , email
             , whatsapp
@@ -48,7 +70,7 @@ class PointsController {
 
         // short syntaxe
         const point = {
-            image: 'image-fake'
+            image: req.file.filename
             , name
             , email
             , whatsapp
@@ -61,8 +83,8 @@ class PointsController {
         const insertedIds = await trx('points').insert(point).returning('id');
 
         const point_id = insertedIds[0];
-
-        const pointItems = items.map((item_id: number) => {
+        const parsedItems = items.split(',').map((x: string) => Number(x));
+        const pointItems = parsedItems.map((item_id: number) => {
             return {
                 item_id,
                 point_id

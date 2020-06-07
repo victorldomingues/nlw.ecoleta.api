@@ -6,7 +6,7 @@ class ItemsController {
     async  index(req: Request, res: Response) {
         const items = await conn('items').select('*');
         const serializedItems = items.map(item => {
-            return { id: item.id, title: item.title, image: item.image, imageUrl: `http://localhost:3333/uploads/${item.image}` }
+            return { id: item.id, title: item.title, image: item.image, imageUrl: `http://192.168.0.111:3333/uploads/${item.image}` }
         })
         return res.json(serializedItems);
     }
